@@ -1,0 +1,79 @@
+name: Sync applications and deploy production
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '3-58/5 * * * *'
+  repository_dispatch:
+    types: [upstream-changed]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Application to deploy (all also checks failed/pending deployments)
+        type: choice
+        default: all
+        options: [all, llm-wiki, investments-scraper, expense-tracker, skoda-mcp-server, codex-telegram-bridge, obsy]
+      force:
+        description: Redeploy even if the application and setup are unchanged
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vps-production
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      commit: ${{ steps.sync.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: recursive
+      - name: Test deployment orchestration
+        run: python3 -m unittest discover -s tests -v
+      - name: Update and record upstream revisions
+        id: sync
+        run: |
+          bash scripts/sync-submodules.sh
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: update application submodules'
+            git push origin HEAD:main
+          fi
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: sync
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      VPS_APPS_ROOT: ${{ vars.VPS_APPS_ROOT || '/opt/vps-apps/apps' }}
+      VPS_STATE_DIR: ${{ vars.VPS_STATE_DIR || '/var/lib/vps-apps' }}
+      VPS_CONFIG_DIR: ${{ vars.VPS_CONFIG_DIR || '/etc/vps-apps' }}
+      SELECTED_APP: ${{ inputs.app || 'all' }}
+      FORCE_DEPLOY: ${{ inputs.force || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.sync.outputs.commit }}
+          submodules: recursive
+          persist-credentials: false
+      - name: Deploy changed applications and retry previous failures
+        run: |
+          args=(--app "$SELECTED_APP")
+          if [[ "$FORCE_DEPLOY" == true ]]; then args+=(--force); fi
+          python3 scripts/deploy.py "${args[@]}"

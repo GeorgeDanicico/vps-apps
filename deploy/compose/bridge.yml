@@ -1,0 +1,25 @@
+# Merge over the upstream Compose file. Keep its service behavior while replacing
+# hard-coded host paths. !override requires Docker Compose 2.24.4+.
+services:
+  skoda-api-client:
+    build:
+      context: ${SKODA_SOURCE_DIR:?}
+      dockerfile: ${APP_DIR:?}/Dockerfile.skoda-gateway.jvm
+    env_file: !override
+      - ${SKODA_ENV_FILE:?}
+  codex-telegram-bridge:
+    build:
+      context: ${APP_DIR:?}
+    env_file: !override
+      - ${BRIDGE_ENV_FILE:?}
+    environment:
+      CODEX_WORKDIR: /workspace
+      PROJECTS_DIR: /projects
+      WIKI_WORKDIR: /projects/llm-wiki
+      SKODA_GATEWAY_URL: http://127.0.0.1:8091
+      SKODA_GATEWAY_TOKEN: ${SKODA_GATEWAY_TOKEN:?}
+    volumes: !override
+      - ${CODEX_AUTH_DIR:?}:/home/bridge/.codex
+      - ${VPS_APPS_ROOT:?}:/projects:ro
+      - ${WIKI_SOURCE_DIR:?}:/projects/llm-wiki
+      - ${APP_DIR:?}:/workspace

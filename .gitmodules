@@ -1,0 +1,24 @@
+[submodule "apps/expense-tracker"]
+	path = apps/expense-tracker
+	url = https://github.com/GeorgeDanicico/expense-tracker.git
+	branch = main
+[submodule "apps/llm-wiki"]
+	path = apps/llm-wiki
+	url = https://github.com/GeorgeDanicico/llm-wiki.git
+	branch = main
+[submodule "apps/codex-telegram-bridge"]
+	path = apps/codex-telegram-bridge
+	url = https://github.com/GeorgeDanicico/codex-telegram-bridge.git
+	branch = main
+[submodule "apps/skoda-mcp-server"]
+	path = apps/skoda-mcp-server
+	url = https://github.com/GeorgeDanicico/skoda-mcp-server.git
+	branch = main
+[submodule "apps/investments-scraper"]
+	path = apps/investments-scraper
+	url = https://github.com/GeorgeDanicico/investments-scraper.git
+	branch = main
+[submodule "apps/obsy"]
+	path = apps/obsy
+	url = https://github.com/GeorgeDanicico/obsy.git
+	branch = main

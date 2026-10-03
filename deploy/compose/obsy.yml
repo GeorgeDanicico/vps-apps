@@ -1,0 +1,10 @@
+# !override requires Docker Compose 2.24.4+; replace upstream port exposure.
+services:
+  obsy:
+    ports: !override
+      - "${OBSY_BIND_ADDRESS:-127.0.0.1}:${OBSY_HOST_PORT:-3001}:3000"
+    networks: [expense]
+networks:
+  expense:
+    external: true
+    name: expense-network
