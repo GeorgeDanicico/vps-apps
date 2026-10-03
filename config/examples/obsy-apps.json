@@ -2,7 +2,5 @@
   {"id": "expense-tracker", "name": "Expense Tracker", "container": "expense-tracker-web", "port": 3000, "healthUrl": "http://expense-tracker-web:3000/health"},
   {"id": "investments", "name": "Investments", "container": "investment", "port": 8080, "healthUrl": "http://investment:8080/health"},
   {"id": "skoda-api", "name": "Skoda API", "container": "api-skoda", "port": 8090},
-  {"id": "telegram-bridge", "name": "Telegram Bridge", "container": "codex-telegram-bridge-codex-telegram-bridge-1"},
-  {"id": "skoda-gateway", "name": "Skoda Gateway", "container": "codex-telegram-bridge-skoda-api-client-1", "port": 8091},
   {"id": "obsy", "name": "Obsy", "container": "obsy-obsy-1", "port": 3001}
 ]

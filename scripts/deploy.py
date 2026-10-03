@@ -57,8 +57,6 @@ def fingerprint(repo, name, apps, revisions, config_dir):
         digest.update(f"{app}:{revisions[app]}\n".encode())
     paths = [repo / "apps.json", repo / "scripts/deploy.py",
              repo / "deploy/adapters/common.sh", repo / f"deploy/adapters/{name}.sh"]
-    if name == "codex-telegram-bridge":
-        paths.append(repo / "deploy/compose/bridge.yml")
     if name == "obsy":
         paths.append(repo / "deploy/compose/obsy.yml")
     paths.append(config_dir / f"{name}.sh")
@@ -69,7 +67,7 @@ def fingerprint(repo, name, apps, revisions, config_dir):
 
 
 def prepare_checkout(source, target, revision):
-    """Independent repositories keep Git metadata usable inside the bridge mounts."""
+    """Independent repositories keep Git metadata usable on the host."""
     target.parent.mkdir(parents=True, exist_ok=True)
     if not (target / ".git").exists():
         if target.exists() and any(target.iterdir()):

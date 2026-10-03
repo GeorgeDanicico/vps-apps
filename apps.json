@@ -3,6 +3,5 @@
   "investments-scraper": {"depends_on": []},
   "expense-tracker": {"depends_on": ["investments-scraper"]},
   "skoda-mcp-server": {"depends_on": []},
-  "codex-telegram-bridge": {"depends_on": ["skoda-mcp-server", "llm-wiki"]},
   "obsy": {"depends_on": []}
 }

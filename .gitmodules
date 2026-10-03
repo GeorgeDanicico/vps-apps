@@ -6,10 +6,6 @@
 	path = apps/llm-wiki
 	url = https://github.com/GeorgeDanicico/llm-wiki.git
 	branch = main
-[submodule "apps/codex-telegram-bridge"]
-	path = apps/codex-telegram-bridge
-	url = https://github.com/GeorgeDanicico/codex-telegram-bridge.git
-	branch = main
 [submodule "apps/skoda-mcp-server"]
 	path = apps/skoda-mcp-server
 	url = https://github.com/GeorgeDanicico/skoda-mcp-server.git

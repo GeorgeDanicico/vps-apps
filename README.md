@@ -5,8 +5,7 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 | Submodule | Production setup |
 | --- | --- |
 | [expense-tracker](https://github.com/GeorgeDanicico/expense-tracker) | Calls `scripts/deploy.sh`; Docker image, production environment file, health check and upstream rollback |
-| [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout, mounted writable into the Telegram bridge |
-| [codex-telegram-bridge](https://github.com/GeorgeDanicico/codex-telegram-bridge) | Uses upstream Compose with configurable host paths; builds the bot and Skoda JVM gateway |
+| [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host |
 | [skoda-mcp-server](https://github.com/GeorgeDanicico/skoda-mcp-server) | Calls `api-skoda/deploy.sh --build` against the pinned source, then enables container restart |
 | [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Calls `deploy.sh`; native image by default, or JVM via host configuration; preserves the log volume |
 | [obsy](https://github.com/GeorgeDanicico/obsy) | Uses upstream Compose with a loopback port override, host metrics mounts and the Docker socket group |
@@ -17,7 +16,7 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 
 Submodule synchronization is active immediately. **To enable production deployment, set the repository Actions variable `DEPLOY_ENABLED` to `true` after configuring the VPS and runner.** Runner registration is managed separately; the runner registered only with expense-tracker does not automatically accept this repository's jobs.
 
-The production job checks successful deployment fingerprints stored outside the Actions workspace. Only applications whose source revision, adapter, shared orchestration, or host `.sh` configuration changed are redeployed. Failed deployments are retried on the next run, even if their submodule updates have already been committed. Dependencies deploy first, a failed dependency blocks its consumers, and independent apps can still deploy successfully. An investments change also refreshes expense-tracker; a Skoda or wiki change refreshes the bridge. Concurrent production runs are serialized.
+The production job checks successful deployment fingerprints stored outside the Actions workspace. Only applications whose source revision, adapter, shared orchestration, or host `.sh` configuration changed are redeployed. Failed deployments are retried on the next run, even if their submodule updates have already been committed. Dependencies deploy first, a failed dependency blocks its consumers, and independent apps can still deploy successfully. An investments change also refreshes expense-tracker. Concurrent production runs are serialized.
 
 Polling detects the latest branch head, so several commits within one interval may deploy together. GitHub's scheduler can delay runs, and public repository schedules can be disabled after 60 days without repository activity. These are [GitHub schedule semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule). For immediate notification on every upstream push, optionally install [the notifier workflow](deploy/upstream-notify.yml.example) in each application repository and give it a `VPS_DISPATCH_TOKEN` secret with **Contents: write** access to this repository. Its ordinary `GITHUB_TOKEN` cannot dispatch into a different repository. Notification payloads never select arbitrary commits: the central job fetches the configured upstream branch heads itself.
 
@@ -43,15 +42,13 @@ Copy and edit the relevant [host configuration examples](config/examples) into `
 Required production files:
 
 - **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PRICE_SERVICE_URL`, `SITE_URL`). `PRICE_SERVICE_URL` can point to `http://investment:8080` on the shared `expense-network`. The adapter creates that network when needed. Container name defaults to `expense-tracker-web`, matching its original action.
-- **Bridge:** `/etc/codex-telegram-bridge/.env.production` with `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, and your existing profile settings. See [the example](config/examples/bridge.env.example). Set a real `SKODA_GATEWAY_TOKEN` in the host bridge `.sh` configuration; the adapter injects the same token into both services. Set `CODEX_AUTH_DIR` to an existing host Codex login directory containing `auth.json`, and set `LOCAL_UID`/`LOCAL_GID` to the user who owns it. The defaults use the runner's account.
-- **Skoda gateway:** `/etc/skoda-mcp-server/.env.production` with `SKODA_EMAIL`, `SKODA_PASSWORD`, `SKODA_VIN`, and `SKODA_SPIN`; see [the example](config/examples/skoda.env.example). This belongs to the bridge's JVM gateway. The separate HTTP API accepts an optional `SKODA_API_ENV_FILE`.
 - **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker and investments through `expense-network`. The Docker socket's group is detected automatically.
 
-Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, Skoda API `127.0.0.1:8090`, Skoda management `127.0.0.1:8888`, Skoda gateway `127.0.0.1:8091`; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. Existing bridge and Obsy Compose deployments must use their existing project names (`docker compose ls`); set `BRIDGE_PROJECT_NAME`/`OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
+Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, Skoda API `127.0.0.1:8090`, Skoda management `127.0.0.1:8888`; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
 
-## Wiki updates through the bridge
+## Wiki checkout
 
-The persistent wiki is an independent Git checkout, with its own `.git` directory inside the writable `/projects/llm-wiki` mount. `/projects` otherwise remains read-only. Commit and push edits made by `/wiki` before the next upstream update. Production sync refuses to discard uncommitted changes or divergent/unpublished commits and reports a failed deployment instead. Git author identity and push credentials for the bot are configured separately; the deployment runner's GitHub token is not passed to the bot.
+The persistent wiki is an independent Git checkout with its own `.git` directory. Commit and push any edits made on the host before the next upstream update. Production sync refuses to discard uncommitted changes or divergent/unpublished commits and reports a failed deployment instead.
 
 ## Manual operation
 
@@ -67,7 +64,7 @@ python3 scripts/deploy.py --dry-run
 
 # Deploy pending applications, or force a specific app and its consumers.
 python3 scripts/deploy.py
-python3 scripts/deploy.py --app codex-telegram-bridge --force
+python3 scripts/deploy.py --app expense-tracker --force
 ```
 
 The same application selector and force option are available under **Actions → Sync applications and deploy production → Run workflow**. Selecting one application includes its dependencies and downstream consumers; unchanged prerequisites are skipped unless they need deployment. Editing a host `<app>.sh` triggers its redeployment on the next check. After changing only an external environment/config file, use `--force` or the manual workflow's force option.
