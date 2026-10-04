@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -136,6 +137,39 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(self.run_deploy(), 0)
         self.assertEqual(git(self.root / 'api', 'rev-parse', 'HEAD'), sha)
         self.assertEqual(git(self.root / 'api', 'rev-parse', '--is-shallow-repository'), 'false')
+
+    def test_fresh_checkout_from_shallow_source_keeps_complete_history(self):
+        upstream = self.repo.parent / 'upstream-api'
+        git(self.repo.parent, 'init', '-b', 'main', str(upstream))
+        git(upstream, 'config', 'user.name', 'Test')
+        git(upstream, 'config', 'user.email', 'test@example.invalid')
+        (upstream / '.gitignore').write_text('deployments.log\n.env\n')
+        (upstream / 'a').write_text('1')
+        git(upstream, 'add', '.gitignore', 'a')
+        git(upstream, 'commit', '-m', 'base')
+        git(upstream, 'switch', '-c', 'feature')
+        (upstream / 'b').write_text('2')
+        git(upstream, 'add', 'b')
+        git(upstream, 'commit', '-m', 'feature')
+        git(upstream, 'switch', 'main')
+        (upstream / 'c').write_text('3')
+        git(upstream, 'add', 'c')
+        git(upstream, 'commit', '-m', 'main work')
+        git(upstream, 'merge', '--no-ff', 'feature', '-m', 'merge feature')
+        shutil.rmtree(self.repo / 'apps/api')
+        subprocess.run(['git', 'clone', '-q', '--depth', '1', f'file://{upstream}', str(self.repo / 'apps/api')], check=True)
+        self.assertEqual(self.run_deploy(selected='api'), 0)
+        checkout = self.root / 'api'
+        self.assertEqual(git(checkout, 'rev-parse', '--is-shallow-repository'), 'false')
+        self.assertEqual(len(git(checkout, 'rev-list', 'HEAD').splitlines()), 4)  # base, feature, main work, merge
+        # A later upstream commit, again delivered through a shallow source.
+        (upstream / 'd').write_text('4')
+        git(upstream, 'add', 'd')
+        git(upstream, 'commit', '-m', 'later')
+        git(self.repo / 'apps/api', 'fetch', '-q', '--depth', '1', 'origin', 'main')
+        git(self.repo / 'apps/api', 'checkout', '-q', '--detach', 'FETCH_HEAD')
+        self.assertEqual(self.run_deploy(selected='api'), 0)
+        self.assertEqual(git(checkout, 'rev-parse', 'HEAD'), git(upstream, 'rev-parse', 'HEAD'))
 
     def test_refuses_dirty_production_checkout_and_preserves_changes(self):
         self.assertEqual(self.run_deploy(), 0)

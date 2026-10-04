@@ -79,22 +79,30 @@ def prepare_checkout(source, target, revision):
         git(target, "remote", "add", "origin", git(source, "remote", "get-url", "origin"))
     if git(target, "status", "--porcelain"):
         raise RuntimeError(f"Uncommitted changes at {target}; commit and push or back them up first")
-    # Existing folders are often shallow (for example from a `fetch-depth: 1` workflow),
-    # and Git cannot move a shallow root forward by fetching from another shallow copy.
+    # Transfer the exact checked-out revision, not a branch that can change mid-run.
+    # The source is the runner's shallow submodule copy. Without --update-shallow Git
+    # rejects the shallow boundary and leaves commits whose parents are missing but not
+    # marked as missing; later ancestry checks then fail. Record the boundary, then
+    # complete the history from the real origin so future updates can be compared.
+    git(target, "fetch", "--update-shallow", "--no-tags", str(source), revision, capture=False)
     if git(target, "rev-parse", "--is-shallow-repository") == "true":
         git(target, "fetch", "--unshallow", "--no-tags", "origin", capture=False)
-    # Transfer the exact checked-out revision, not a branch that can change mid-run.
-    git(target, "fetch", "--no-tags", str(source), revision, capture=False)
     has_head = subprocess.run(
         ["git", "-C", str(target), "rev-parse", "--verify", "HEAD"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     ).returncode == 0
     if has_head:
         current = git(target, "rev-parse", "HEAD")
-        if current != revision and subprocess.run(
-            ["git", "-C", str(target), "merge-base", "--is-ancestor", current, revision],
-        ).returncode != 0:
-            raise RuntimeError(f"Local/divergent commits at {target}; refusing to discard them")
+        if current != revision:
+            status = subprocess.run(
+                ["git", "-C", str(target), "merge-base", "--is-ancestor", current, revision],
+            ).returncode
+            if status == 1:
+                raise RuntimeError(f"Local/divergent commits at {target}; refusing to discard them")
+            if status != 0:
+                raise RuntimeError(
+                    f"Git history at {target} is incomplete or damaged; move the folder aside "
+                    "(it will be cloned again on the next deployment)")
     git(target, "checkout", "--detach", revision, capture=False)
     git(target, "submodule", "update", "--init", "--recursive", capture=False)
 
