@@ -43,7 +43,7 @@ Required production files:
 - **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PRICE_SERVICE_URL`, `SITE_URL`). `PRICE_SERVICE_URL` can point to `http://investment:8080` on the shared `expense-network`. The adapter creates that network when needed. Container name defaults to `expense-tracker-web`, matching its original action.
 - **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker and investments through `expense-network`. The Docker socket's group is detected automatically.
 
-Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`,; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
+Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
 
 ## Wiki checkout
 
