@@ -79,6 +79,10 @@ def prepare_checkout(source, target, revision):
         git(target, "remote", "add", "origin", git(source, "remote", "get-url", "origin"))
     if git(target, "status", "--porcelain"):
         raise RuntimeError(f"Uncommitted changes at {target}; commit and push or back them up first")
+    # Existing folders are often shallow (for example from a `fetch-depth: 1` workflow),
+    # and Git cannot move a shallow root forward by fetching from another shallow copy.
+    if git(target, "rev-parse", "--is-shallow-repository") == "true":
+        git(target, "fetch", "--unshallow", "--no-tags", "origin", capture=False)
     # Transfer the exact checked-out revision, not a branch that can change mid-run.
     git(target, "fetch", "--no-tags", str(source), revision, capture=False)
     has_head = subprocess.run(
