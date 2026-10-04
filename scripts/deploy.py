@@ -52,11 +52,13 @@ def select_apps(apps, selected):
 
 
 def fingerprint(repo, name, apps, revisions, config_dir):
+    """Only inputs that change what runs for this app: its own pinned revision (the
+    submodule commit), its adapter, the shared adapter helpers and its host config.
+    Dependencies order and gate deployments but never trigger a redeploy, and neither
+    do edits to apps.json or this script."""
     digest = hashlib.sha256()
-    for app in [name, *apps[name]["depends_on"]]:
-        digest.update(f"{app}:{revisions[app]}\n".encode())
-    paths = [repo / "apps.json", repo / "scripts/deploy.py",
-             repo / "deploy/adapters/common.sh", repo / f"deploy/adapters/{name}.sh"]
+    digest.update(f"{name}:{revisions[name]}\n".encode())
+    paths = [repo / "deploy/adapters/common.sh", repo / f"deploy/adapters/{name}.sh"]
     if name == "obsy":
         paths.append(repo / "deploy/compose/obsy.yml")
     paths.append(config_dir / f"{name}.sh")
