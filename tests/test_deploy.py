@@ -67,13 +67,13 @@ class DeploymentTests(unittest.TestCase):
         git(source, 'commit', '-m', 'change upstream')
         return git(source, 'rev-parse', 'HEAD')
 
-    def test_updates_only_app_and_consumers_with_exact_revisions(self):
+    def test_updates_only_the_changed_app_with_exact_revisions(self):
         self.assertEqual(self.run_deploy(), 0)
         self.assertEqual(self.run_deploy(), 0)
         self.assertEqual([self.count(x) for x in self.apps], [1, 1, 1])
         sha = self.change_upstream('api')
         self.assertEqual(self.run_deploy(), 0)
-        self.assertEqual([self.count(x) for x in self.apps], [2, 2, 1])
+        self.assertEqual([self.count(x) for x in self.apps], [2, 1, 1])
         self.assertEqual(git(self.root / 'api', 'rev-parse', 'HEAD'), sha)
         self.assertTrue((self.root / 'api/.git').is_dir())
 
@@ -96,6 +96,24 @@ class DeploymentTests(unittest.TestCase):
         adapter.write_text(adapter.read_text() + '# changed setup\n')
         self.assertEqual(self.run_deploy(), 0)
         self.assertEqual([self.count(x) for x in self.apps], [1, 2, 2])
+
+    def test_orchestration_edits_do_not_redeploy_unchanged_apps(self):
+        self.assertEqual(self.run_deploy(), 0)
+        (self.repo / 'scripts/deploy.py').write_text('driver changed')
+        self.apps['third'] = {'depends_on': []}
+        (self.repo / 'apps.json').write_text(json.dumps({**self.apps}))
+        (self.repo / 'deploy/adapters/third.sh').write_text('true\n')
+        source = self.repo / 'apps/third'
+        source.mkdir(parents=True)
+        git(source, 'init', '-b', 'main')
+        git(source, 'config', 'user.name', 'Test')
+        git(source, 'config', 'user.email', 'test@example.invalid')
+        git(source, 'remote', 'add', 'origin', str(source))
+        (source / 'f').write_text('x')
+        git(source, 'add', '.')
+        git(source, 'commit', '-m', 'initial')
+        self.assertEqual(self.run_deploy(), 0)
+        self.assertEqual([self.count(x) for x in ('api', 'bridge', 'other')], [1, 1, 1])
 
     def test_force_single_app_includes_consumers_without_forcing_prerequisites(self):
         self.assertEqual(self.run_deploy(), 0)
