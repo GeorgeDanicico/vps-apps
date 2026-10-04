@@ -6,10 +6,6 @@
 	path = apps/llm-wiki
 	url = https://github.com/GeorgeDanicico/llm-wiki.git
 	branch = main
-[submodule "apps/skoda-mcp-server"]
-	path = apps/skoda-mcp-server
-	url = https://github.com/GeorgeDanicico/skoda-mcp-server.git
-	branch = main
 [submodule "apps/investments-scraper"]
 	path = apps/investments-scraper
 	url = https://github.com/GeorgeDanicico/investments-scraper.git

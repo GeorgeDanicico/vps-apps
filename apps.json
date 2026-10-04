@@ -2,6 +2,5 @@
   "llm-wiki": {"depends_on": []},
   "investments-scraper": {"depends_on": []},
   "expense-tracker": {"depends_on": ["investments-scraper"]},
-  "skoda-mcp-server": {"depends_on": []},
   "obsy": {"depends_on": []}
 }

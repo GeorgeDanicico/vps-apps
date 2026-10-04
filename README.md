@@ -6,7 +6,6 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 | --- | --- |
 | [expense-tracker](https://github.com/GeorgeDanicico/expense-tracker) | Calls `scripts/deploy.sh`; Docker image, production environment file, health check and upstream rollback |
 | [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host |
-| [skoda-mcp-server](https://github.com/GeorgeDanicico/skoda-mcp-server) | Calls `api-skoda/deploy.sh --build` against the pinned source, then enables container restart |
 | [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Calls `deploy.sh`; native image by default, or JVM via host configuration; preserves the log volume |
 | [obsy](https://github.com/GeorgeDanicico/obsy) | Uses upstream Compose with a loopback port override, host metrics mounts and the Docker socket group |
 
@@ -44,7 +43,7 @@ Required production files:
 - **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PRICE_SERVICE_URL`, `SITE_URL`). `PRICE_SERVICE_URL` can point to `http://investment:8080` on the shared `expense-network`. The adapter creates that network when needed. Container name defaults to `expense-tracker-web`, matching its original action.
 - **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker and investments through `expense-network`. The Docker socket's group is detected automatically.
 
-Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, Skoda API `127.0.0.1:8090`, Skoda management `127.0.0.1:8888`; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
+Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`,; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
 
 ## Wiki checkout
 
