@@ -6,7 +6,7 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 | --- | --- |
 | [expense-tracker](https://github.com/GeorgeDanicico/expense-tracker) | Calls `scripts/deploy.sh`; Docker image, production environment file, health check and upstream rollback |
 | [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host |
-| [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Calls `deploy.sh`; native image by default, or JVM via host configuration; preserves the log volume |
+| [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Builds the JVM image first (native images are never built on the VPS), then calls `deploy.sh`; preserves the log volume |
 | [obsy](https://github.com/GeorgeDanicico/obsy) | Uses upstream Compose with a loopback port override, host metrics mounts and the Docker socket group |
 
 ## Automatic updates
@@ -23,7 +23,7 @@ Sync and deployment are part of the same workflow because [a push made with `GIT
 
 ## VPS configuration
 
-The runner needs Git, Bash, Python 3.9+, curl, Docker daemon access, and Docker Compose 2.24.4+ (`!override` is used to replace ports and mount paths; see [Docker merge rules](https://docs.docker.com/reference/compose-file/merge/)). Native Java image builds require enough memory for GraalVM; set `DEPLOY_VARIANT=jvm` for investments-scraper if necessary. Production is gated by `DEPLOY_ENABLED`; validation of pull requests runs only on GitHub-hosted runners.
+The runner needs Git, Bash, Python 3.9+, curl, Docker daemon access, and Docker Compose 2.24.4+ (`!override` is used to replace ports and mount paths; see [Docker merge rules](https://docs.docker.com/reference/compose-file/merge/)). investments-scraper always uses its JVM image, because GraalVM native compilation needs about 3 GB of RAM. Production is gated by `DEPLOY_ENABLED`; validation of pull requests runs only on GitHub-hosted runners.
 
 Repository Actions variables:
 
