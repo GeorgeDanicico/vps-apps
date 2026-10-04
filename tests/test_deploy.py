@@ -127,6 +127,16 @@ class DeploymentTests(unittest.TestCase):
         self.assertFalse(self.root.exists())
         self.assertFalse((self.state / 'deployed.json').exists())
 
+    def test_shallow_existing_checkout_is_completed_before_updating(self):
+        source = self.repo / 'apps/api'
+        self.root.mkdir(parents=True, exist_ok=True)
+        subprocess.run(['git', 'clone', '-q', '--depth', '1', f'file://{source}', str(self.root / 'api')], check=True)
+        self.assertEqual(git(self.root / 'api', 'rev-parse', '--is-shallow-repository'), 'true')
+        sha = self.change_upstream('api')
+        self.assertEqual(self.run_deploy(), 0)
+        self.assertEqual(git(self.root / 'api', 'rev-parse', 'HEAD'), sha)
+        self.assertEqual(git(self.root / 'api', 'rev-parse', '--is-shallow-repository'), 'false')
+
     def test_refuses_dirty_production_checkout_and_preserves_changes(self):
         self.assertEqual(self.run_deploy(), 0)
         file = self.root / 'api/file.txt'
