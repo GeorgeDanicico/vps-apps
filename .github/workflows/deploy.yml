@@ -3,8 +3,6 @@ name: Sync applications and deploy production
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '3-58/5 * * * *'
   repository_dispatch:
     types: [upstream-changed]
   workflow_dispatch:
