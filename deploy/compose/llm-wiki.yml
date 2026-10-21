@@ -1,0 +1,9 @@
+# !override requires Docker Compose 2.24.4+; replace upstream port exposure and host paths.
+services:
+  study:
+    ports: !override
+      - "${LLM_WIKI_BIND_ADDRESS:-127.0.0.1}:${LLM_WIKI_HOST_PORT:-3002}:8000"
+    env_file: !override
+      - "${LLM_WIKI_ENV_FILE:-/etc/llm-wiki/study.env}"
+    volumes: !override
+      - "${LLM_WIKI_DATA_DIR:-/var/lib/llm-wiki}:/data"

@@ -97,6 +97,15 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(self.run_deploy(), 0)
         self.assertEqual([self.count(x) for x in self.apps], [1, 2, 2])
 
+    def test_compose_override_changes_redeploy_only_affected_app(self):
+        override = self.repo / 'deploy/compose/other.yml'
+        override.parent.mkdir(parents=True)
+        override.write_text('services: {}\n')
+        self.assertEqual(self.run_deploy(), 0)
+        override.write_text('services:\n  other: {}\n')
+        self.assertEqual(self.run_deploy(), 0)
+        self.assertEqual([self.count(x) for x in self.apps], [1, 1, 2])
+
     def test_orchestration_edits_do_not_redeploy_unchanged_apps(self):
         self.assertEqual(self.run_deploy(), 0)
         (self.repo / 'scripts/deploy.py').write_text('driver changed')
