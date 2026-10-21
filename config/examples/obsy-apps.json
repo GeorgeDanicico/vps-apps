@@ -1,5 +1,6 @@
 [
   {"id": "expense-tracker", "name": "Expense Tracker", "container": "expense-tracker-web", "port": 3000, "healthUrl": "http://expense-tracker-web:3000/health"},
   {"id": "investments", "name": "Investments", "container": "investment", "port": 8080, "healthUrl": "http://investment:8080/health"},
-  {"id": "obsy", "name": "Obsy", "container": "obsy-obsy-1", "port": 3001}
+  {"id": "obsy", "name": "Obsy", "container": "obsy-obsy-1", "port": 3001},
+  {"id": "llm-wiki", "name": "Study site", "container": "llm-wiki-study-1", "port": 3002}
 ]

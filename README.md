@@ -5,7 +5,7 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 | Submodule | Production setup |
 | --- | --- |
 | [expense-tracker](https://github.com/GeorgeDanicico/expense-tracker) | Calls `scripts/deploy.sh`; Docker image, production environment file, health check and upstream rollback |
-| [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host |
+| [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host, then builds and runs the study site container from upstream Compose with a loopback port, host env file and data directory override |
 | [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Builds the JVM image first (native images are never built on the VPS), then calls `deploy.sh`; preserves the log volume |
 | [obsy](https://github.com/GeorgeDanicico/obsy) | Uses upstream Compose with a loopback port override, host metrics mounts and the Docker socket group |
 
@@ -15,7 +15,7 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 
 Submodule synchronization is active immediately. **To enable production deployment, set the repository Actions variable `DEPLOY_ENABLED` to `true` after configuring the VPS and runner.** Runner registration is managed separately; the runner registered only with expense-tracker does not automatically accept this repository's jobs.
 
-The production job checks successful deployment fingerprints stored outside the Actions workspace. Only applications whose own submodule revision, adapter, shared adapter helpers (`common.sh`), or host `.sh` configuration changed are redeployed; a change in one app, in `apps.json` or in `deploy.py` never redeploys the others. Failed deployments are retried on the next run, even if their submodule updates have already been committed. Dependencies deploy first, a failed dependency blocks its consumers, and independent apps can still deploy successfully. Concurrent production runs are serialized.
+The production job checks successful deployment fingerprints stored outside the Actions workspace. Only applications whose own submodule revision, adapter, Compose override (`deploy/compose/<app>.yml`), shared adapter helpers (`common.sh`), or host `.sh` configuration changed are redeployed; a change in one app, in `apps.json` or in `deploy.py` never redeploys the others. Failed deployments are retried on the next run, even if their submodule updates have already been committed. Dependencies deploy first, a failed dependency blocks its consumers, and independent apps can still deploy successfully. Concurrent production runs are serialized.
 
 Polling detects the latest branch head, so several commits within one interval may deploy together. GitHub's scheduler can delay runs, and public repository schedules can be disabled after 60 days without repository activity. These are [GitHub schedule semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule). For immediate notification on every upstream push, optionally install [the notifier workflow](deploy/upstream-notify.yml.example) in each application repository and give it a `VPS_DISPATCH_TOKEN` secret with **Contents: write** access to this repository. Its ordinary `GITHUB_TOKEN` cannot dispatch into a different repository. Notification payloads never select arbitrary commits: the central job fetches the configured upstream branch heads itself.
 
@@ -42,12 +42,13 @@ Required production files:
 
 - **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PRICE_SERVICE_URL`, `SITE_URL`). `PRICE_SERVICE_URL` can point to `http://investment:8080` on the shared `expense-network`. The adapter creates that network when needed. Container name defaults to `expense-tracker-web`, matching its original action.
 - **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker and investments through `expense-network`. The Docker socket's group is detected automatically.
+- **llm-wiki study site:** `/etc/llm-wiki/study.env` (mode `600`, readable by the runner account) with `PROGRESS_TOKEN_HASHES=<device>:<sha256 hex>,…`; only SHA-256 hashes of the device tokens are stored, never the tokens themselves. The progress database lives in `/var/lib/llm-wiki`, which must exist and be owned by the container user (uid `10001`) before the first deploy: `sudo install -d -o 10001 -g 10001 -m 700 /var/lib/llm-wiki /var/lib/llm-wiki/backups`. Until upstream llm-wiki contains `docker-compose.yml`, the adapter only checks the wiki and skips the container.
 
-Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`; investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
+Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, llm-wiki study site `127.0.0.1:3002` (health at `/api/health`); investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
 
 ## Wiki checkout
 
-The persistent wiki is an independent Git checkout with its own `.git` directory. Commit and push any edits made on the host before the next upstream update. Production sync refuses to discard uncommitted changes or divergent/unpublished commits and reports a failed deployment instead.
+The persistent wiki is an independent Git checkout with its own `.git` directory. Commit and push any edits made on the host before the next upstream update. Production sync refuses to discard uncommitted changes or divergent/unpublished commits and reports a failed deployment instead. The study site image is built from this checkout, but the build and the container never write into it; review progress lives only in `/var/lib/llm-wiki`.
 
 ## Manual operation
 
