@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 export DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-/etc/expense-tracker/.env.production}"
-export IMAGE_NAME="${IMAGE_NAME:-expense-tracker}"
+# The image is built on GitHub and pushed to GHCR (the app's "Build image" workflow); the VPS only
+# pulls it, because next build needs more memory than the VPS has.
+export IMAGE_SOURCE="${IMAGE_SOURCE:-pull}"
+export IMAGE_NAME="${IMAGE_NAME:-ghcr.io/georgedanicico/expense-tracker}"
 export IMAGE_TAG="$APP_REVISION"
 export CONTAINER_NAME="${CONTAINER_NAME:-expense-tracker-web}"
 # The notifications worker: a second container from the same image, started by the app's scripts/deploy.sh.
