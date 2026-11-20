@@ -1,6 +1,5 @@
 {
   "llm-wiki": {"depends_on": []},
-  "investments-scraper": {"depends_on": []},
-  "expense-tracker": {"depends_on": ["investments-scraper"]},
+  "expense-tracker": {"depends_on": []},
   "obsy": {"depends_on": []}
 }
