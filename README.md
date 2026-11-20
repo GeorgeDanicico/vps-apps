@@ -6,7 +6,6 @@ Central deployment repository for GeorgeDanicico's VPS applications. Each applic
 | --- | --- |
 | [expense-tracker](https://github.com/GeorgeDanicico/expense-tracker) | Calls `scripts/deploy.sh`; pulls the image GitHub built into GHCR, production environment file, health check and upstream rollback, plus the notifications worker container |
 | [llm-wiki](https://github.com/GeorgeDanicico/llm-wiki) | Updates a persistent Markdown/Git checkout on the host, then builds and runs the study site container from upstream Compose with a loopback port, host env file and data directory override |
-| [investments-scraper](https://github.com/GeorgeDanicico/investments-scraper) | Builds the JVM image first (native images are never built on the VPS), then calls `deploy.sh`; preserves the log volume |
 | [obsy](https://github.com/GeorgeDanicico/obsy) | Uses upstream Compose with a loopback port override, host metrics mounts and the Docker socket group |
 
 ## Automatic updates
@@ -23,7 +22,7 @@ Sync and deployment are part of the same workflow because [a push made with `GIT
 
 ## VPS configuration
 
-The runner needs Git, Bash, Python 3.9+, curl, Docker daemon access, and Docker Compose 2.24.4+ (`!override` is used to replace ports and mount paths; see [Docker merge rules](https://docs.docker.com/reference/compose-file/merge/)). investments-scraper always uses its JVM image, because GraalVM native compilation needs about 3 GB of RAM. Production is gated by `DEPLOY_ENABLED`; validation of pull requests runs only on GitHub-hosted runners.
+The runner needs Git, Bash, Python 3.9+, curl, Docker daemon access, and Docker Compose 2.24.4+ (`!override` is used to replace ports and mount paths; see [Docker merge rules](https://docs.docker.com/reference/compose-file/merge/)). Production is gated by `DEPLOY_ENABLED`; validation of pull requests runs only on GitHub-hosted runners.
 
 Repository Actions variables:
 
@@ -40,13 +39,13 @@ Copy and edit the relevant [host configuration examples](config/examples) into `
 
 Required production files:
 
-- **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PRICE_SERVICE_URL`, `SITE_URL`). `PRICE_SERVICE_URL` can point to `http://investment:8080` on the shared `expense-network`. The adapter creates that network when needed. Container name defaults to `expense-tracker-web`, matching its original action.
+- **Expense tracker:** `/etc/expense-tracker/.env.production` with the app's existing production settings (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SITE_URL`). The adapter creates the shared `expense-network` when needed. Container name defaults to `expense-tracker-web`, matching its original action.
   - **Prebuilt image:** the adapter sets `IMAGE_SOURCE=pull` and `IMAGE_NAME=ghcr.io/georgedanicico/expense-tracker`, so the VPS pulls `<image>:<submodule commit>` instead of running `next build`, which needs more memory than the VPS has. The app's "Build image" workflow pushes that tag, and its notify step wakes this repository only once the image exists. The VPS must be able to pull it: make the GHCR package public, or run `docker login ghcr.io` once with a `read:packages` token. Set `IMAGE_SOURCE=build` in the host config to build on the VPS again.
   - **Notifications worker:** the app's `scripts/deploy.sh` also starts `expense-tracker-worker` (`WORKER_CONTAINER_NAME`) from the same image with `node worker.js`: same environment file, `expense-network`, restart `unless-stopped`, no port. It needs `SUPABASE_SECRET_KEY` in the environment file, and Web Push needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (`mailto:` plus an address); generate the key pair once with `npx web-push generate-vapid-keys` and keep it on the VPS only. A worker that fails to start never rolls back the web container: the script restores the previous worker, if any, and warns.
-- **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker and investments through `expense-network`. The Docker socket's group is detected automatically.
+- **Obsy:** `/etc/obsy/apps.json`; start with [the example](config/examples/obsy-apps.json), adjusting container names to your configuration. Its health probes reach expense-tracker through `expense-network`. The Docker socket's group is detected automatically.
 - **llm-wiki study site:** `/etc/llm-wiki/study.env` (mode `600`, readable by the runner account) with `PROGRESS_TOKEN_HASHES=<device>:<sha256 hex>,…`; only SHA-256 hashes of the device tokens are stored, never the tokens themselves. The progress database lives in `/var/lib/llm-wiki`, which must exist and be owned by the container user (uid `10001`) before the first deploy: `sudo install -d -o 10001 -g 10001 -m 700 /var/lib/llm-wiki /var/lib/llm-wiki/backups`. Until upstream llm-wiki contains `docker-compose.yml`, the adapter only checks the wiki and skips the container.
 
-Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, llm-wiki study site `127.0.0.1:3002` (health at `/api/health`); investments preserves its upstream `8080:8080` binding. Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
+Default endpoints: expense tracker `127.0.0.1:3000`, Obsy `127.0.0.1:3001`, llm-wiki study site `127.0.0.1:3002` (health at `/api/health`). Keep the existing reverse proxy pointed at these endpoints. An existing Obsy Compose deployment must use its existing project name (`docker compose ls`); set `OBSY_PROJECT_NAME` accordingly to avoid creating duplicate stacks.
 
 ## Wiki checkout
 

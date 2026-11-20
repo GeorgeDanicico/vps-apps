@@ -6,10 +6,6 @@
 	path = apps/llm-wiki
 	url = https://github.com/GeorgeDanicico/llm-wiki.git
 	branch = main
-[submodule "apps/investments-scraper"]
-	path = apps/investments-scraper
-	url = https://github.com/GeorgeDanicico/investments-scraper.git
-	branch = main
 [submodule "apps/obsy"]
 	path = apps/obsy
 	url = https://github.com/GeorgeDanicico/obsy.git
