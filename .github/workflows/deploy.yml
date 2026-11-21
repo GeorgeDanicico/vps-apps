@@ -11,7 +11,7 @@ on:
         description: Application to deploy (all also checks failed/pending deployments)
         type: choice
         default: all
-        options: [all, llm-wiki, expense-tracker, obsy]
+        options: [all, llm-wiki, expense-tracker, obsy, lockin]
       force:
         description: Redeploy even if the application and setup are unchanged
         type: boolean

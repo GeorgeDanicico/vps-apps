@@ -10,3 +10,7 @@
 	path = apps/obsy
 	url = https://github.com/GeorgeDanicico/obsy.git
 	branch = main
+[submodule "apps/lockin"]
+	path = apps/lockin
+	url = https://github.com/GeorgeDanicico/lockin.git
+	branch = main
