@@ -1,5 +1,6 @@
 {
   "llm-wiki": {"depends_on": []},
   "expense-tracker": {"depends_on": []},
-  "obsy": {"depends_on": []}
+  "obsy": {"depends_on": []},
+  "lockin": {"depends_on": []}
 }
